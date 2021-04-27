@@ -4,6 +4,8 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -28,8 +30,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.Animation;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,6 +44,13 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
+import com.iflytek.cloud.ErrorCode;
+import com.iflytek.cloud.InitListener;
+import com.iflytek.cloud.SpeechConstant;
+import com.iflytek.cloud.SpeechError;
+import com.iflytek.cloud.SpeechSynthesizer;
+import com.iflytek.cloud.SpeechUtility;
+import com.iflytek.cloud.SynthesizerListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,28 +62,45 @@ import java.util.List;
  */
 public class WordsFragment extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
+
     private static final String ARG_PARAM2 = "param2";
 
-    // TODO: Rename and change types of parameters
+
     private String mParam1;
+
     private String mParam2;
+
+    private MyViewModel viewModel;
+
+    private RecyclerView recyclerView;
+
+    private LinearLayoutManager manager;
+
+    private MyAdpater adpater_r, adpater_c;
+
+    private List<Word> allWords;
+
+    private LiveData<List<Word>> filterList;
+
+    int oldSize;
+
+    ConnectivityManager connectivityManager;
+
+    SpeechSynthesizer synthesizer;
+
+    InitListener initListener;
+
+    SynthesizerListener listener;
+
+    NetworkInfo networkInfo;
 
     public WordsFragment() {
         // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment WordsFragment.
-     */
-    // TODO: Rename and change types and number of parameters
+
+
     public static WordsFragment newInstance(String param1, String param2) {
         WordsFragment fragment = new WordsFragment();
         Bundle args = new Bundle();
@@ -155,29 +183,6 @@ public class WordsFragment extends Fragment {
         }
         return true;
     }
-
-    private MyViewModel viewModel;
-
-    private RecyclerView recyclerView;
-
-    private LinearLayoutManager manager;
-
-    private MyAdpater adpater_r, adpater_c;
-
-    private List<Word> allWords;
-
-    MyTTs ts;
-
-
-    /* 除非整个fragment被销毁，不如oldSize不会重新初始化，所以应该在回调方法中初始化
-        这样每次回调oldSize都被重置，因为我们设置oldSize的目的是避免多次刷新，这是针对
-        当前这个wordFragment页面来做的,切换回来应该不受影响
-     */
-
-
-    private LiveData<List<Word>> filterList;
-
-    int oldSize;
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
@@ -263,6 +268,7 @@ public class WordsFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         setHasOptionsMenu(true);
+        SpeechUtility.createUtility(requireActivity(), SpeechConstant.APPID+"=你的appid"); // 启动语音服务
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             mParam1 = getArguments().getString(ARG_PARAM1);
@@ -272,7 +278,7 @@ public class WordsFragment extends Fragment {
         viewModel.init(getActivity());
         adpater_r = new MyAdpater(R.layout.word_item_update, viewModel.getList().getValue(),viewModel);
         adpater_c = new MyAdpater(R.layout.card_word_item, new ArrayList<Word>(),viewModel);
-
+        initSeech();
     }
 
 
@@ -345,40 +351,92 @@ public class WordsFragment extends Fragment {
         dialog.show();
     }
 
+    void initSeech(){
+        initListener = new InitListener() {
+            @Override
+            public void onInit(int i) {
+                Log.d("语音服务初始化码","code: "+i);
+                if (i!=ErrorCode.SUCCESS){
+                    Log.d("初始化结果","初始化失败");
+                }else{
+                    Log.d("初始化结果","初始化成功");
+                }
+            }
+        };
+        synthesizer = SpeechSynthesizer.createSynthesizer(requireActivity(),initListener);
+        listener = new SynthesizerListener() {
+            @Override
+            public void onSpeakBegin() {
 
-    void speakEnglish(String english){
-        ts = new MyTTs(requireActivity(),english);
+            }
+
+            @Override
+            public void onBufferProgress(int i, int i1, int i2, String s) {
+
+            }
+
+            @Override
+            public void onSpeakPaused() {
+
+            }
+
+            @Override
+            public void onSpeakResumed() {
+
+            }
+
+            @Override
+            public void onSpeakProgress(int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onCompleted(SpeechError speechError) {
+
+            }
+
+            @Override
+            public void onEvent(int i, int i1, int i2, Bundle bundle) {
+
+            }
+        };
     }
 
-    class MyTTs implements TextToSpeech.OnInitListener{
-        private TextToSpeech mSpeech;
-        private Context mContext;
-        private String text;
-        @Override
-        public void onInit(int status) {
-            mSpeech.setPitch(0.5f);
-            mSpeech.setSpeechRate(1.0f);
-            mSpeech.speak(text,TextToSpeech.QUEUE_ADD,null);
+    void setParam(){
+        String voice = "xiaoyan";
+        String mEngine = SpeechConstant.TYPE_CLOUD;
+        synthesizer.setParameter(SpeechConstant.PARAMS,null);
+        if (mEngine.equals(SpeechConstant.TYPE_CLOUD)) {
+            // 左边为key, 右边为value
+            synthesizer.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
+            //支持实时音频返回，仅在synthesizeToUri条件下支持
+            synthesizer.setParameter(SpeechConstant.TTS_DATA_NOTIFY, "1");
+            // 设置在线合成发音人
+            synthesizer.setParameter(SpeechConstant.VOICE_NAME, voice);
+        } else {
+            synthesizer.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
+            synthesizer.setParameter(SpeechConstant.VOICE_NAME, "");
         }
-
-        MyTTs(Context mContext, String text){
-            this.mContext = mContext;
-            this.text = text;
-            this.mSpeech = new TextToSpeech(mContext,this);
+    }
+    void speakEnglish(String english){
+        setParam();
+        connectivityManager = (ConnectivityManager) requireActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        networkInfo = connectivityManager.getActiveNetworkInfo();
+        if (networkInfo==null){
+            Toast.makeText(requireActivity(),"无网络，请打开网络获取语音服务",Toast.LENGTH_LONG).show();
+        }else{
+            if(networkInfo.getType()==ConnectivityManager.TYPE_WIFI){
+                Log.d("网络服务类型","wifi");
+            }else if(networkInfo.getType()==ConnectivityManager.TYPE_MOBILE){
+                Log.d("网络服务类型","移动数据");
+            }
         }
-
-        void stopTTs(){
-            mSpeech.stop();
-            mSpeech.shutdown();
-            mSpeech = null;
-        }
+        synthesizer.startSpeaking(english,listener);
     }
 
     @Override
     public void onStop() {
+        synthesizer.stopSpeaking();
         super.onStop();
-        if(ts!=null){
-            ts.stopTTs();
-        }
     }
 }

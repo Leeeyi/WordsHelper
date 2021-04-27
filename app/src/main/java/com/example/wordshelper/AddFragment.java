@@ -177,7 +177,7 @@ public class AddFragment extends Fragment {
     void getApiChinese(String english){
         OkHttpClient client = new OkHttpClient.Builder().build();
         uriMethod = "https://api.tianapi.com/txapi/enwords/index?key=APIKEY&word=lexicon";
-        uriMethod =  uriMethod.replaceAll("APIKEY","1f45fa4996a09a50a0caff1b5c7cd5bf");
+        uriMethod =  uriMethod.replaceAll("APIKEY","你的api签名");
         uriMethod = uriMethod.replaceAll("lexicon",english);
         myhandler = new MyHandler();
         new Thread(new Runnable() {

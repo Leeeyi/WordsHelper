@@ -24,24 +24,21 @@ public interface WordDao {
     @Query("DELETE FROM Word;")
     public void deleteAll();
 
-    @Query("SELECT * FROM Word")
+    @Query("SELECT * FROM Word ORDER BY id DESC")
     public LiveData<List<Word>> queryAll();
 
 
-    @Query("SELECT * FROM Word WHERE id = :id")
+    @Query("SELECT * FROM Word WHERE id = :id ORDER BY id DESC ")
     public LiveData<Word> queryByid(int id);
 
     @Query("DELETE FROM sqlite_sequence")
     public void clear();
 
-    @Query("SELECT * FROM Word WHERE English LIKE :english")
+    @Query("SELECT * FROM Word WHERE English LIKE :english ORDER BY id DESC")
     LiveData<List<Word>> queryEnglish(String english);
 
-    @Query("SELECT * FROM Word WHERE Chinese LIKE :chinese")
+    @Query("SELECT * FROM Word WHERE Chinese LIKE :chinese ORDER BY id DESC")
     LiveData<List<Word>> queryChinese(String chinese);
-
-    @Query("SELECT * FROM Word")
-    List<Word> queryForsplash();
 
 
 }
