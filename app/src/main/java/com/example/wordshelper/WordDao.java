@@ -40,5 +40,4 @@ public interface WordDao {
     @Query("SELECT * FROM Word WHERE Chinese LIKE :chinese ORDER BY id DESC")
     LiveData<List<Word>> queryChinese(String chinese);
 
-
 }

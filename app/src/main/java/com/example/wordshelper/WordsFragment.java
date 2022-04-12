@@ -85,6 +85,9 @@ public class WordsFragment extends Fragment {
 
     int oldSize;
 
+    /**
+     * 接下来的参数都是讯飞语音用到的参数，特别是2-4个，代码看不懂就回头看
+     */
     ConnectivityManager connectivityManager;
 
     SpeechSynthesizer synthesizer;
@@ -111,6 +114,11 @@ public class WordsFragment extends Fragment {
     }
 
 
+    /**
+     *  这个是菜单的创建页面
+     * @param menu menu 资源文件
+     * @param inflater 系统传参
+     */
     @Override
     public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
@@ -118,6 +126,13 @@ public class WordsFragment extends Fragment {
         InputMethodManager inm =(InputMethodManager) requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
         SearchView searchView = (SearchView) menu.findItem(R.id.app_bar_search).getActionView();
         inm.showSoftInput(searchView,0);
+
+        /**
+         *  下面这个部分就是搜索栏模糊匹配的逻辑，重点是第二个重写方法
+         *  filterList是一个LiveData
+         *  这里设置了两种adapter不停切换是因为可以对应不同的样式
+         *  其实有更好的方法解决这个，一个adapter就能做到，或者你们可以不做样式的切换
+         */
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
@@ -131,17 +146,18 @@ public class WordsFragment extends Fragment {
                     filterList = viewModel.queryChinese(newText);
                 }else if(newText.matches("[a-zA-Z]+")){
                     filterList = viewModel.queryEnglish(newText);
-                }else {
+                }else{
                     filterList = viewModel.getList();
                 }
-                filterList.observe(getViewLifecycleOwner(), new Observer<List<Word>>() {
+
+                filterList.observe(getViewLifecycleOwner(), new Observer<List<Word>>(){
                     int tmp = -1;
                     @Override
                     public void onChanged(List<Word> wordList) {
                         if(tmp==wordList.size()){
                             return;
                         }
-                        Log.d("看这里2","执行了这部分的监听");
+
                         if(viewModel.getIsRecyclerview().getValue()){
                             MyAdpater adpater = adpater_r;
                             adpater.setList(wordList);
@@ -158,9 +174,13 @@ public class WordsFragment extends Fragment {
                 return true;
             }
         });
-
     }
 
+    /**
+     * 菜单其他内容的选中逻辑
+     * @param item
+     * @return
+     */
     @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
@@ -193,6 +213,9 @@ public class WordsFragment extends Fragment {
         manager.setOrientation(RecyclerView.VERTICAL);
         recyclerView.setLayoutManager(manager);
         filterList = viewModel.getList();
+        /**
+         * 下面这部分应该是冗余逻辑，去掉可能有关系也可能没关系，去年水平不到家，你们可以自己调试
+         */
         filterList.observe(getViewLifecycleOwner(), words -> {
             allWords = words;
             if(viewModel.getIsRecyclerview().getValue()){
@@ -201,7 +224,6 @@ public class WordsFragment extends Fragment {
                 if(wordList.size()==oldSize){
                     return;
                 }
-                Log.d("看这里1","执行了这部分的监听");
                 adpater.setList(wordList);
                 changeView_R(adpater,wordList);
                 oldSize = wordList.size();
@@ -216,6 +238,7 @@ public class WordsFragment extends Fragment {
                 oldSize = wordList.size();
             }
         });
+
         viewModel.getIsRecyclerview().observe(requireActivity(), aBoolean -> {
             MyAdpater adpater;
             List<Word> wordList = viewModel.getList().getValue();
@@ -230,6 +253,10 @@ public class WordsFragment extends Fragment {
             }
 
         });
+
+        /**
+         * 滑动list删除的逻辑，这里我是在数据库去删除，然后让LiveData去改变，然后改变显示内容，其实可以优化逻辑
+         */
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0,ItemTouchHelper.START|ItemTouchHelper.END) {
             @Override
             public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
@@ -239,7 +266,7 @@ public class WordsFragment extends Fragment {
             @Override
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
                 Word word = allWords.get(viewHolder.getAdapterPosition());
-                viewModel.delete(word);
+                viewModel.delete(word); // 直接关联数据库删除
                 Snackbar.make(requireActivity().findViewById(R.id.wordsFragment),"删除了该词汇",
                         Snackbar.LENGTH_SHORT).setAction("撤销", new View.OnClickListener() {
                     @Override
@@ -250,7 +277,10 @@ public class WordsFragment extends Fragment {
             }
         }).attachToRecyclerView(recyclerView);
 
-        FloatingActionButton button = getActivity().findViewById(R.id.to_add);
+        /**
+         * 点击添加按钮的逻辑,用Navigation跳转页面
+         */
+        FloatingActionButton button = requireActivity().findViewById(R.id.to_add);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -268,7 +298,14 @@ public class WordsFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         setHasOptionsMenu(true);
-        SpeechUtility.createUtility(requireActivity(), SpeechConstant.APPID+"=你的appid"); // 启动语音服务
+
+        /**
+         *  304行这个SpeechUtility就是你们安装讯飞语音合成SDK后启动的步骤
+         *  但其实不应该在这里进行启动，建议在Activity创建时启动
+         *  你们去注册好后填入你们自己的APPID,文档有说明
+         */
+        SpeechUtility.createUtility(requireActivity(), "Your APPID");
+
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             mParam1 = getArguments().getString(ARG_PARAM1);
@@ -312,6 +349,12 @@ public class WordsFragment extends Fragment {
         recyclerView.setAdapter(adpater);
     }
 
+    /**
+     * 单词的详情页面都放在这个BottomSheetDialog里面了
+     *
+     * @param wordList
+     * @param position
+     */
     @SuppressLint("SetTextI18n")
     void showBottomSheetDialog(List<Word>wordList, int position){
         View view = requireActivity().getLayoutInflater().inflate(R.layout.dialog,null);
@@ -326,6 +369,7 @@ public class WordsFragment extends Fragment {
         }
         textWord.setText(wordList.get(position).getEnglish());
         Button speak = view.findViewById(R.id.button);
+
         speak.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -406,18 +450,14 @@ public class WordsFragment extends Fragment {
         String voice = "xiaoyan";
         String mEngine = SpeechConstant.TYPE_CLOUD;
         synthesizer.setParameter(SpeechConstant.PARAMS,null);
-        if (mEngine.equals(SpeechConstant.TYPE_CLOUD)) {
-            // 左边为key, 右边为value
-            synthesizer.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
-            //支持实时音频返回，仅在synthesizeToUri条件下支持
-            synthesizer.setParameter(SpeechConstant.TTS_DATA_NOTIFY, "1");
-            // 设置在线合成发音人
-            synthesizer.setParameter(SpeechConstant.VOICE_NAME, voice);
-        } else {
-            synthesizer.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
-            synthesizer.setParameter(SpeechConstant.VOICE_NAME, "");
-        }
+        // 左边为key, 右边为value
+        synthesizer.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
+        //支持实时音频返回，仅在synthesizeToUri条件下支持
+        synthesizer.setParameter(SpeechConstant.TTS_DATA_NOTIFY, "1");
+        // 设置在线合成发音人
+        synthesizer.setParameter(SpeechConstant.VOICE_NAME, voice);
     }
+
     void speakEnglish(String english){
         setParam();
         connectivityManager = (ConnectivityManager) requireActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -431,9 +471,12 @@ public class WordsFragment extends Fragment {
                 Log.d("网络服务类型","移动数据");
             }
         }
-        synthesizer.startSpeaking(english,listener);
+        synthesizer.startSpeaking(english,listener); // 合成语音最关键的方法，在初始化后才能调用
     }
 
+    /**
+     * 记得在生命周期结束时释放
+     */
     @Override
     public void onStop() {
         synthesizer.stopSpeaking();

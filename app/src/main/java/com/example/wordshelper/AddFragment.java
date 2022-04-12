@@ -23,6 +23,7 @@ import android.widget.Toast;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
 
 import java.io.IOException;
 import java.util.List;
@@ -113,7 +114,10 @@ public class AddFragment extends Fragment {
         button = requireActivity().findViewById(R.id.btnadd);
         button.setEnabled(false);
         inm =(InputMethodManager) requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-        inm.showSoftInput(editE,0);
+
+        /**
+         * 在输入的时候监听EditText的状态
+         */
         TextWatcher textWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -147,7 +151,7 @@ public class AddFragment extends Fragment {
     }
 
     @Override
-    public void onStop() {
+    public void onStop() { // 在navigate()调用的时候确实执行了这个回调
         super.onStop();
         inm.hideSoftInputFromWindow(getView().getWindowToken(),0);
     }
@@ -174,12 +178,21 @@ public class AddFragment extends Fragment {
         }
     }
 
+    /**
+     * 这个的方法在于去网上的词典获取更多的单词解释，我这里用的是天行数据的API，一天最多一百个，你们可以照着用，不改我的数据
+     * 也可以考虑自己弄一个API去搞单词解释，本质就是请求后处理一下返回结果就好了
+     * @param english
+     */
     void getApiChinese(String english){
         OkHttpClient client = new OkHttpClient.Builder().build();
         uriMethod = "https://api.tianapi.com/txapi/enwords/index?key=APIKEY&word=lexicon";
-        uriMethod =  uriMethod.replaceAll("APIKEY","你的api签名");
+        uriMethod =  uriMethod.replaceAll("APIKEY","1f45fa4996a09a50a0caff1b5c7cd5bf");
         uriMethod = uriMethod.replaceAll("lexicon",english);
         myhandler = new MyHandler();
+        /**
+         * 我在一个子线程下去跑OkHTTP的同步请求流程，得到的结果发送到handler下处理
+         * 得到的内容处理在Handler的handleMessage下处理
+         */
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -197,6 +210,13 @@ public class AddFragment extends Fragment {
             }
         }).start();
     }
+
+
+    /**
+     * 老Api不一定能查到东西，所以我区分了两种情况
+     * @param json
+     * @param word
+     */
 
     void insertWithApi(String json,Word word){
         Gson gson = new Gson();

@@ -11,7 +11,8 @@ public abstract class WordDataBase extends RoomDatabase {
     private static WordDataBase INSTANCE;
     public synchronized static  WordDataBase getDatabase(Context context){
         if(INSTANCE==null){
-            INSTANCE = Room.databaseBuilder(context,WordDataBase.class,"Word_DataBase").fallbackToDestructiveMigration().build();
+            INSTANCE = Room.databaseBuilder(context,WordDataBase.class,"Word_DataBase")
+                    .fallbackToDestructiveMigration().build();
         }
         return INSTANCE;
     }
