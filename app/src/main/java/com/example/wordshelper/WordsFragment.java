@@ -85,9 +85,6 @@ public class WordsFragment extends Fragment {
 
     int oldSize;
 
-    /**
-     * 接下来的参数都是讯飞语音用到的参数，特别是2-4个，代码看不懂就回头看
-     */
     ConnectivityManager connectivityManager;
 
     SpeechSynthesizer synthesizer;
@@ -213,9 +210,6 @@ public class WordsFragment extends Fragment {
         manager.setOrientation(RecyclerView.VERTICAL);
         recyclerView.setLayoutManager(manager);
         filterList = viewModel.getList();
-        /**
-         * 下面这部分应该是冗余逻辑，去掉可能有关系也可能没关系，去年水平不到家，你们可以自己调试
-         */
         filterList.observe(getViewLifecycleOwner(), words -> {
             allWords = words;
             if(viewModel.getIsRecyclerview().getValue()){
@@ -302,7 +296,6 @@ public class WordsFragment extends Fragment {
         /**
          *  304行这个SpeechUtility就是你们安装讯飞语音合成SDK后启动的步骤
          *  但其实不应该在这里进行启动，建议在Activity创建时启动
-         *  你们去注册好后填入你们自己的APPID,文档有说明
          */
         SpeechUtility.createUtility(requireActivity(), "Your APPID");
 

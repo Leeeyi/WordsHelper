@@ -8,6 +8,9 @@ import androidx.lifecycle.ViewModel;
 
 import java.util.List;
 
+/**
+ * 串联着仓库层，对于Room的操作的方法都在这里进行分发
+ */
 public class MyViewModel  extends ViewModel {
 
     private LiveData<List<Word>> liveWordlist;
